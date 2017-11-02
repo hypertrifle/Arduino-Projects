@@ -1,30 +1,24 @@
-// NeoPixel Ring simple sketch (c) 2013 Shae Erisson
-// released under the GPLv3 license to match the rest of the AdaFruit NeoPixel library
+// Some simple 1D Animation tests for FastLED compatible devices.
+// Author: Rich Searle - hypertrifle.com
 
-#include "FastLED.h"
-#include <Easing.h>
+#include "FastLED.h"      //http://fastled.io/
+#include <Easing.h>       //https://github.com/tobiastoft/ArduinoEasing
 
-// Which pin on the Arduino is connected to the NeoPixels?
-// On a Trinket or Gemma we suggest changing this to 1
+// Neopixel / LED strip pin.
 #define PIN            6
 
+//for use of potentiometer input.
 #define POT_PIN        2
 
-// How many NeoPixels are attached to the Arduino?
 #define NUMPIXELS     31 // 144
-
 #define MAX_BRIGHTNESS 64
 #define MIN_BRIGHTNESS 0
 
-
-
-// When we setup the NeoPixel library, we tell it how many pixels, and which pin to use to send signals.
-// Note that for older NeoPixel strips you might need to change the third parameter--see the strandtest
-// example for more information on possible values.
-
 //fastLED display
 CRGB display[NUMPIXELS];
-int t = 0; // our "time" input
+
+
+float t = 0; // our "time" input
 int spread = 4; //size of the lit area, this is still scaled by the max brightness and the easing function. // 35 works for all lit but pulsing.
 
 int min_hue = 128;
@@ -36,48 +30,121 @@ float loop_interval = 1; //
 int delay_interval = 0;
 int delay_amount = 0;
 
+enum Animations {  WIPE, RANDOM, DEV, FULL, PULSE };
+enum EaseType { Sine, Quint, Quad, Cubic, Quart, Expo, Circ, Bounce};
+
+Animations mode = DEV;
+
 void setup() {
-  FastLED.addLeds<NEOPIXEL, 6>(display, NUMPIXELS);
+  randomSeed(analogRead(0));
+  FastLED.addLeds<NEOPIXEL, PIN>(display, NUMPIXELS);
   randomise();
 }
 
-void randomise() {
-  randomSeed(analogRead(0));
-
-  //we probably want to ease all of the values towards the lower values.
-  spread = random(1,36); //Easing::easeInSine(random(1,36),1,36,36);
-
-  // loopLength = random(50,300) / 100;
-
-  //set t as to start in a random location in the coulr cycle.
+//im rather embarased about this next bit, was written in a hurry.
+int ease(int numi, int mini, int maxi,EaseType ease ){
   
-  hue_change_interval = Easing::easeInSine(random(1,30),1,30,30);
-  loop_interval = 1;
+  switch(ease){
+    case Sine:
+    return Easing::easeInOutSine( numi, mini,maxi,maxi);
 
-  //set the ease types?
+    case Quint:
+    return Easing::easeInOutQuint( numi, mini,maxi,maxi);
 
-  delay_interval = max(1,random(0,5)*10);
+    case Quad:
+    return Easing::easeInOutQuad( numi, mini,maxi,maxi);
 
+    case Cubic:
+    return Easing::easeInOutCubic( numi, mini,maxi,maxi);
 
-  delay_amount = (int) random(4000,6000) / delay_interval;
+    case Quart:
+    return Easing::easeInOutQuart( numi, mini,maxi,maxi);
 
+    case Circ:
+    return Easing::easeInOutCirc( numi, mini,maxi,maxi);
 
-  int colour_range_type = random(0,3);
+    case Bounce:
+    return Easing::easeInOutBounce( numi, mini,maxi,maxi);
 
-  switch(colour_range_type){
-    case 0:
-      min_hue = 0; //full coulor spectrum.
-      max_hue = 255;
+    case Expo:
+    return Easing::easeInOutExpo( numi, mini,maxi,maxi);
+  }
+
+}
+
+int bounce(int t, int maxValue){
+
+  int length = t % (maxValue*2);
+  if(length >= maxValue){
+    length = maxValue - (length - maxValue);
+  }
+
+  return length;
+
+}
+
+void randomise() {
+ 
+  //lets choose an animation types
+
+  int r = random(0,5);
+
+  switch(r){
+    case 1:
+      mode = RANDOM;
+      break;
+
+    case 2:
+      mode = FULL;
+      break;
+
+    case 3:
+      mode = PULSE;
       break;
 
     default:
-      min_hue = 128; //this is our ASTHETIC
-      max_hue = 228;
-      break;
+      mode = WIPE;
   }
 
 
-  t =  random(0,delay_amount);
+
+  //we probably want to ease all of the values towards the lower values.
+  spread = random(1,7); //Easing::easeInSine(random(1,36),1,36,36);
+  switch(spread){
+    case 4 :
+      spread = 35;
+      break;
+    case 5 :
+      spread = 10;
+    break;
+    case 6 :
+      spread = 80;
+    break;
+  }
+
+  //not sure what to do to these yet, to keep as an int i can only slow it down from 1, 
+  hue_change_interval = random(1,5)* 25;
+  loop_interval =random(1,10)*25;
+
+
+
+  //set the ease types?
+
+  delay_amount = 20000 /delay_interval; // (int) random(4000,6000) / delay_interval;
+  
+  //lets generate a randome hue range
+  min_hue = random(0,256);
+
+  if(random(0,4) == 0){
+    min_hue = 0;
+    max_hue = 255;
+  } else {
+    max_hue = min_hue + min(80,random(0, 255 - min_hue));
+    
+  }
+
+
+  t =  0;
   
   //switch between "step" itterations.
 
@@ -87,7 +154,7 @@ void randomise() {
 
 void loop() {
 
-  t ++;
+  t += 0.1;
 
   if(t > delay_amount){
     t = 0;
@@ -95,39 +162,72 @@ void loop() {
   }
 
 
+
+
   int step = 0;
 
   
-  switch(0){
+  switch(mode){
 
-    default:
+    case DEV:
+
+    break;
+
+    case RANDOM:
+    step = random(0,(int)(t*loop_interval)%(NUMPIXELS));
+    break;
+
+    case WIPE:
       // calculate the step of the display (twice the length)
       step =  (int)(t*loop_interval)%(NUMPIXELS*2);
       // apply our bounce effect.
       if(step >= NUMPIXELS){
         step = NUMPIXELS - (step - NUMPIXELS);
       }
-      break;
+    break;
   }
   
 
 
 
-  // lets ease our left to right position.
+  // lets ease our display postition.
   // Sine Quint Quad Cubic Quart Expo Circ Elastic Back Bounce
+
   step =  Easing::easeInOutSine( step, 0,NUMPIXELS,NUMPIXELS+1);
+  
+
+  
 
    //now lets set our pixels
   for(int i=0;i<NUMPIXELS;i++){
-
-    int dist = abs(step - i);
     
     //ease this between a colour range based on the distance?.
-    int hue = min_hue + (t*hue_change_interval) % (max_hue - min_hue); //TODO: we need to bounce this to make it smooth.
+    int hue = bounce(t*hue_change_interval, max_hue - min_hue);
+    //offset
+    hue += min_hue;
 
-    int saturation = 255; //lower will be paler - cooler white toward the center?.
 
-    int brightness = Easing::easeInQuad( max(0, spread - dist) , 0,MAX_BRIGHTNESS, spread );
+    
+    int saturation = 255; //lower will be paler/whiter light.
+
+    int dist = abs(step - i); //an absolute distance from the current 'step'
+
+    int brightness = 0;
+
+    switch(mode){
+
+      
+      case PULSE:
+         brightness = bounce((int) ((t*loop_interval)), MAX_BRIGHTNESS);
+        break;
+      case FULL:
+        brightness = MAX_BRIGHTNESS;
+        break;
+      default:
+        brightness = Easing::easeInQuad( max(0, spread - dist) , 0,MAX_BRIGHTNESS, spread );
+        break;
+    }
+
 
     if(brightness > 0){
       brightness = max(MIN_BRIGHTNESS,brightness);
