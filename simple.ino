@@ -24,6 +24,8 @@ int spread = 4; //size of the lit area, this is still scaled by the max brightne
 int min_hue = 128;
 int max_hue = 228;
 
+int hue_sweep = 0;
+
 int hue_change_interval = 1;
 float loop_interval = 1; //
 
@@ -112,25 +114,37 @@ void randomise() {
   spread = random(1,7); //Easing::easeInSine(random(1,36),1,36,36);
   switch(spread){
     case 4 :
-      spread = 35;
+      spread = (mode == RANDOM)? 3 : 35;
       break;
     case 5 :
-      spread = 10;
+      spread = (mode == RANDOM)? 2 : 10;
     break;
     case 6 :
-      spread = 80;
+      spread = (mode == RANDOM)? 1 : 80;
     break;
+
   }
 
   //not sure what to do to these yet, to keep as an int i can only slow it down from 1, 
-  hue_change_interval = random(1,5)* 25;
-  loop_interval =random(1,10)*25;
+  hue_change_interval = random(1,10);
+
+  if(hue_change_interval > 7){
+    hue_change_interval = hue_change_interval * 10;
+  }
+
+  hue_sweep = random(0,4);
+
+  loop_interval = random(1,10);
+
+  if(loop_interval > 7){
+    loop_interval = loop_interval * 10;
+  }
 
 
 
   //set the ease types?
-
-  delay_amount = 20000 /delay_interval; // (int) random(4000,6000) / delay_interval;
+  delay_interval = 1;
+  delay_amount = 200 /delay_interval; // (int) random(4000,6000) / delay_interval;
   
   //lets generate a randome hue range
   min_hue = random(0,256);
@@ -147,6 +161,11 @@ void randomise() {
   t =  0;
   
   //switch between "step" itterations.
+
+  for(int i=0;i<NUMPIXELS;i++){
+      display[i] = CHSV( 0, 0, 0);
+  }
+  delay(100);
 
 }
 
@@ -174,7 +193,7 @@ void loop() {
     break;
 
     case RANDOM:
-    step = random(0,(int)(t*loop_interval)%(NUMPIXELS));
+    step = random(0,NUMPIXELS);
     break;
 
     case WIPE:
@@ -194,15 +213,13 @@ void loop() {
   // Sine Quint Quad Cubic Quart Expo Circ Elastic Back Bounce
 
   step =  Easing::easeInOutSine( step, 0,NUMPIXELS,NUMPIXELS+1);
-  
-
-  
+   
 
    //now lets set our pixels
   for(int i=0;i<NUMPIXELS;i++){
     
     //ease this between a colour range based on the distance?.
-    int hue = bounce(t*hue_change_interval, max_hue - min_hue);
+    int hue = bounce(t*hue_change_interval + (i*hue_sweep), max_hue - min_hue);
     //offset
     hue += min_hue;
 
