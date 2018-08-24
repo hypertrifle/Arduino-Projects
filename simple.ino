@@ -11,7 +11,7 @@
 #define POT_PIN        2
 
 #define NUMPIXELS     31 // 144
-#define MAX_BRIGHTNESS 64
+#define MAX_BRIGHTNESS 128
 #define MIN_BRIGHTNESS 0
 
 //fastLED display
@@ -144,7 +144,7 @@ void randomise() {
 
   //set the ease types?
   delay_interval = 1;
-  delay_amount = 200 /delay_interval; // (int) random(4000,6000) / delay_interval;
+  delay_amount = 200 /delay_interval; //this needs tob e set
   
   //lets generate a randome hue range
   min_hue = random(0,256);
@@ -209,9 +209,7 @@ void loop() {
 
 
 
-  // lets ease our display postition.
-  // Sine Quint Quad Cubic Quart Expo Circ Elastic Back Bounce
-
+  // lets ease our display postition. (randomsize this?)
   step =  Easing::easeInOutSine( step, 0,NUMPIXELS,NUMPIXELS+1);
    
 
@@ -223,8 +221,7 @@ void loop() {
     //offset
     hue += min_hue;
 
-
-    
+   
     int saturation = 255; //lower will be paler/whiter light.
 
     int dist = abs(step - i); //an absolute distance from the current 'step'
